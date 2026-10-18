@@ -2,6 +2,8 @@ import type { Capture, Destination, PublicState } from './model';
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const isOptions = location.pathname.endsWith('/options.html');
+let showingClip = !isOptions;
+let addingWorkspace = false;
 document.body.classList.toggle('options', isOptions);
 let state: PublicState;
 let capture: Capture | undefined;
@@ -40,11 +42,12 @@ function selectDestination(d?: Destination) {
   selected = d; $('destination-name').textContent = d?.name || 'Choose a page or database'; updateSave();
 }
 function renderConnections() {
-  const connectionSignature = JSON.stringify(state.connections);
+  const connectionSignature = JSON.stringify([state.connections, state.activeConnectionId]);
   if (lastConnections !== connectionSignature) {
     const previous = workspace();
     $<HTMLSelectElement>('workspace').replaceChildren(...state.connections.map(c => new Option(c.name, c.id)));
-    if (state.connections.some(c => c.id === previous)) $<HTMLSelectElement>('workspace').value = previous;
+    const chosen = state.activeConnectionId ?? previous;
+    if (state.connections.some(c => c.id === chosen)) $<HTMLSelectElement>('workspace').value = chosen;
     lastConnections = connectionSignature;
     selectDestination(state.recent[workspace()]);
   }
@@ -52,9 +55,16 @@ function renderConnections() {
   for (const connection of state.connections) {
     const row = document.createElement('div'); row.className = 'connection-row';
     const name = document.createElement('span'); name.textContent = connection.name;
-    row.append(name, button('Remove', async () => {
+    name.textContent += connection.id === state.activeConnectionId ? ' · Selected' : '';
+    const actions = document.createElement('div'); actions.className = 'connection-actions';
+    actions.append(button(`Use ${connection.name}`, async () => {
+      const next = await send<PublicState>('SELECT_WORKSPACE', { connectionId: connection.id });
+      showingClip = true; addingWorkspace = false; renderState(next);
+      if (!capture) await captureCurrent();
+    }), button('Remove', async () => {
       if (confirm('Remove this workspace connection from this device? Saved Notion pages will remain.')) renderState(await send('DISCONNECT', { connectionId: connection.id }));
-    }));
+    }, 'text-button danger'));
+    row.append(name, actions);
     $('connected-list').append(row);
   }
 }
@@ -96,10 +106,17 @@ function renderJobs() {
 }
 function renderState(next: PublicState) {
   state = next;
-  show('loading', false); show('vault', state.locked); show('lock', !state.locked); show('settings', !isOptions);
-  show('connections', !state.locked && (isOptions || state.connections.length === 0));
-  show('clip', !state.locked && !isOptions && state.connections.length > 0);
-  show('privacy', isOptions);
+  show('loading', false); show('vault', state.locked); show('lock', !state.locked); show('settings', !isOptions || showingClip);
+  show('connections', !state.locked && (!showingClip || state.connections.length === 0));
+  show('clip', !state.locked && showingClip && state.connections.length > 0);
+  show('privacy', isOptions && !showingClip);
+  const hasConnections = state.connections.length > 0;
+  $('connections-title').textContent = hasConnections ? 'Your workspaces' : 'Connect a workspace';
+  $('connections-copy').textContent = hasConnections ? 'Your connections are saved. Choose a workspace to continue clipping—no need to connect again.' : 'Use your own Notion integration. Clips go directly from Firefox to Notion.';
+  show('connection-setup', !hasConnections || addingWorkspace);
+  show('add-workspace', hasConnections);
+  $('add-workspace').textContent = addingWorkspace ? 'Cancel adding workspace' : 'Add another workspace';
+  $('add-workspace').setAttribute('aria-expanded', String(addingWorkspace));
   $('vault-title').textContent = state.exists ? 'Welcome back.' : 'Your clipper, your workspace.';
   $('vault-copy').textContent = state.exists ? 'Unlock your connections and pick up where you left off.' : 'Create a passphrase to encrypt your Notion tokens and captures on this device.';
   $('unlock').textContent = state.exists ? 'Unlock clipper' : 'Create secure clipper';
@@ -160,15 +177,25 @@ $('connect-form').addEventListener('submit', e => {
     if (!await permission) throw new Error('Notion API access is needed to connect your workspace.');
     const token = value('token'); $<HTMLInputElement>('token').value = '';
     const next = await send<PublicState>('CONNECT', { token, name: value('connection-name') });
-    $<HTMLInputElement>('connection-name').value = ''; renderState(next); notice('Workspace connected. Return to a webpage and open Pocket Clipper to save it.');
+    $<HTMLInputElement>('connection-name').value = ''; addingWorkspace = false; renderState(next); notice('Workspace connected. Return to a webpage and open Pocket Clipper to save it.');
   });
 });
-$('settings').addEventListener('click', () => void browser.runtime.openOptionsPage());
+$('settings').addEventListener('click', () => {
+  if (isOptions) { showingClip = false; renderState(state); }
+  else void browser.runtime.openOptionsPage();
+});
+$('add-workspace').addEventListener('click', () => {
+  addingWorkspace = !addingWorkspace; renderState(state);
+  if (addingWorkspace) $('connection-name').focus();
+});
 $('lock').addEventListener('click', () => void perform($('lock'), async () => { renderState(await send('LOCK')); }));
 $('forget').addEventListener('click', () => void perform($('forget'), async () => {
   if (confirm('Delete every local connection and capture? This cannot be undone. Your pages in Notion will remain.')) renderState(await send('RESET', { confirm: 'DELETE' }));
 }));
-$('workspace').addEventListener('change', () => { searchSequence++; selectDestination(state.recent[workspace()]); $('destinations').replaceChildren(); show('destination-picker', false); $('choose-destination').setAttribute('aria-expanded', 'false'); cursor = undefined; });
+$('workspace').addEventListener('change', () => {
+  searchSequence++; selectDestination(state.recent[workspace()]); $('destinations').replaceChildren(); show('destination-picker', false); $('choose-destination').setAttribute('aria-expanded', 'false'); cursor = undefined;
+  void send<PublicState>('SELECT_WORKSPACE', { connectionId: workspace() }).then(renderState).catch(e => notice(e.message, true));
+});
 $('clip-title').addEventListener('input', updateSave);
 document.querySelectorAll('input[name="mode"]').forEach(input => input.addEventListener('change', updateSave));
 $('recapture').addEventListener('click', () => void perform($('recapture'), captureCurrent));

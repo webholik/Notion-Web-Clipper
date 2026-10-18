@@ -12,10 +12,13 @@
     <p class="fine">Your integration tokens and captures are encrypted on this device. Your passphrase is never sent to Notion.</p>
   </section>
   <section id="connections" hidden>
-    <div class="eyebrow">MAKE YOURSELF AT HOME</div><h1>Connect a workspace</h1><p class="muted">Use your own Notion integration. Clips go directly from Firefox to Notion.</p>
+    <div class="eyebrow">MAKE YOURSELF AT HOME</div><h1 id="connections-title">Connect a workspace</h1><p id="connections-copy" class="muted">Use your own Notion integration. Clips go directly from Firefox to Notion.</p>
+    <div id="connected-list"></div>
+    <button id="add-workspace" class="secondary" type="button" aria-expanded="false" aria-controls="connection-setup" hidden>Add another workspace</button>
+    <div id="connection-setup">
     <ol class="setup-steps"><li><a href="https://app.notion.com/developers/connections" target="_blank" rel="noreferrer">Create an internal integration</a> with Read, Insert and Update content.</li><li>In Notion, open a page or database. Choose <strong>••• → Connections</strong> and add your integration.</li><li>Paste the integration token below.</li></ol>
     <form id="connect-form"><label for="connection-name">Workspace label <span class="optional">optional</span></label><input id="connection-name" placeholder="Personal workspace" maxlength="80" autocomplete="off"><label for="token">Integration token</label><input id="token" type="password" placeholder="ntn_…" autocomplete="off" required spellcheck="false"><button id="connect" type="submit" class="primary">Connect to Notion <span aria-hidden="true">↗</span></button></form>
-    <div id="connected-list"></div>
+    </div>
   </section>
   <section id="clip" hidden>
     <div class="eyebrow">KEEP THE GOOD STUFF</div><h1>Save for later.</h1><p class="muted intro">A place for the pages worth coming back to.</p>

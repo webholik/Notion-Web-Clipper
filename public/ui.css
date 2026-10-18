@@ -3,3 +3,5 @@
 @media(min-width:600px){body:not(.options){width:420px}body.options #app{padding:32px 24px}.options h1{font-size:36px}}
 @media(max-width:340px){#app{padding:16px}.brand{font-size:13px}.icon-button{padding:4px;font-size:11px}.capture-mode label{padding:10px 6px}.capture-mode small{font-size:9px}}
 @media(prefers-color-scheme:dark){:root{color-scheme:dark;--paper:#1d231f;--surface:#252d27;--ink:#f2f1e9;--muted:#aab6ac;--line:#414d42;--green:#b0d4b9;--soft:#2c3930;--warning:#e8bf7c;--error:#f2a297;--focus:#b0d4b9}.primary{background:#b0d4b9;color:#17271f}}
+
+.connection-row{align-items:flex-start;flex-wrap:wrap}.connection-actions{display:flex;flex-wrap:wrap;gap:8px}.connection-actions .text-button{color:var(--green)}.connection-actions .danger{color:var(--error)}

@@ -74,3 +74,35 @@ test('allows an empty passphrase through setup, persistence and unlocking', asyn
   await page.getByRole('button', { name: 'Unlock clipper' }).click();
   await expect(page.getByLabel('Workspace', { exact: true })).toContainText('Personal workspace');
 });
+
+test('shows saved workspaces after unlocking settings and lets the user continue clipping', async ({ page }) => {
+  await connect(page);
+  await page.getByRole('button', { name: 'Manage connections' }).click();
+  await page.getByLabel('Passphrase', { exact: true }).fill('a');
+  await page.getByRole('button', { name: 'Unlock clipper' }).click();
+  await expect(page.getByRole('heading', { name: 'Your workspaces' })).toBeVisible();
+  await expect(page.getByLabel('Integration token')).toBeHidden();
+  await page.screenshot({ path: 'artifacts/saved-workspaces.png', fullPage: true });
+  await page.getByRole('button', { name: 'Use Personal workspace', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Save for later.' })).toBeVisible();
+  await expect(page.getByLabel('Workspace', { exact: true })).toContainText('Personal workspace');
+});
+
+test('remembers the chosen workspace across locking and reopening', async ({ page }) => {
+  await connect(page);
+  await page.getByRole('button', { name: 'Manage connections' }).click();
+  await page.getByLabel('Passphrase', { exact: true }).fill('a');
+  await page.getByRole('button', { name: 'Unlock clipper' }).click();
+  await page.getByRole('button', { name: 'Add another workspace' }).click();
+  await page.getByLabel('Workspace label', { exact: false }).fill('Work');
+  await page.getByLabel('Integration token').fill('ntn_fixture_work_token_for_testing');
+  await page.getByRole('button', { name: 'Connect to Notion' }).click();
+  await page.getByRole('button', { name: 'Use Work', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Save for later.' })).toBeVisible();
+  await page.reload();
+  await page.getByLabel('Passphrase', { exact: true }).fill('a');
+  await page.getByRole('button', { name: 'Unlock clipper' }).click();
+  await expect(page.locator('#workspace option:checked')).toHaveText('Work');
+  await page.getByRole('button', { name: 'Use Work', exact: true }).click();
+  await expect(page.getByLabel('Workspace', { exact: true })).toContainText('Work');
+});

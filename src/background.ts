@@ -21,7 +21,7 @@ function requireVault(): VaultData {
 async function state(): Promise<PublicState> {
   if (!activeJob && Date.now() - lastActivity > 15 * 60_000) { data = undefined; passphrase = undefined; }
   const exists = !!(await browser.storage.local.get('vault')).vault;
-  return { exists, locked: !data, connections: data?.connections.map(({ id, name }) => ({ id, name })) ?? [], jobs: data?.jobs ?? [], recent: data?.recent ?? {} };
+  return { exists, locked: !data, connections: data?.connections.map(({ id, name }) => ({ id, name })) ?? [], jobs: data?.jobs ?? [], recent: data?.recent ?? {}, activeConnectionId: data?.activeConnectionId ?? data?.connections[0]?.id };
 }
 function client(connectionId: string) {
   const connection = requireVault().connections.find(c => c.id === connectionId);
@@ -75,6 +75,10 @@ async function handle(message: any) {
   }
   const vault = requireVault();
   switch (message.type) {
+    case 'SELECT_WORKSPACE':
+      client(String(message.connectionId));
+      vault.activeConnectionId = message.connectionId;
+      await persist(); return state();
     case 'CONNECT': {
       const token = typeof message.token === 'string' ? message.token.trim() : '';
       if (!/^[A-Za-z0-9_-]{20,300}$/.test(token)) throw new Error('Paste a valid Notion integration token.');
@@ -89,6 +93,7 @@ async function handle(message: any) {
     case 'DISCONNECT': {
       if (vault.jobs.some(j => j.connectionId === message.connectionId && j.status !== 'done')) throw new Error('Finish or remove pending clips for this workspace first.');
       vault.connections = vault.connections.filter(c => c.id !== message.connectionId);
+      if (vault.activeConnectionId === message.connectionId) vault.activeConnectionId = vault.connections[0]?.id;
       delete vault.recent[message.connectionId];
       await persist(); return state();
     }

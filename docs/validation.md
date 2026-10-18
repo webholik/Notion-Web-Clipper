@@ -4,7 +4,7 @@
 
 - TypeScript compilation and extension bundling.
 - Sixteen unit/integration tests: content extraction, URL safety, rich-text limits, encryption, destination mapping, bounded writes and recovery after ambiguous responses.
-- Six real Chrome browser tests: personal setup and saving, append reconciliation, lock/unlock across reload, a 320px link-only fallback, the packaged article extractor, and empty-passphrase setup and unlocking.
+- Eight real Chrome browser tests: personal setup and saving, append reconciliation, lock/unlock across reload, a 320px link-only fallback, the packaged article extractor, empty-passphrase setup and unlocking, returning to saved workspaces, and remembering the selected workspace after reload.
 - Actual desktop Firefox temporary add-on installation and nine integration checks using local Notion fixtures: background messaging, workspace setup, destination search, content script capture, rejection of privileged requests from webpage content scripts, save completion, encrypted storage, locking and decryption.
 - Visual inspection of the 390px saved-article interface. No browser console errors in the main flow.
 

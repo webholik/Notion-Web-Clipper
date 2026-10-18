@@ -67,7 +67,7 @@ If a content append times out, Resume reads the page and compares the saved cont
 
 If page creation itself times out, the result may be unknown. The extension will not create a second page automatically. Check the destination in Notion and paste the created page's URL into the recovery form. The extension verifies the parent and existing content before attaching it. If no page exists, remove the capture and clip again after checking Notion.
 
-Use **Settings** to add or remove workspace connections. Removing a connection requires first finishing or removing its pending clips. Clearing a local capture never deletes its Notion page. **Delete all local clipper data** removes the encrypted vault and cannot be undone. A forgotten passphrase requires resetting local data and reconnecting.
+After unlocking, use the **Workspace** selector in the clipping view to choose a saved connection. In **Settings**, saved connections appear under **Your workspaces**; choose **Use [workspace name]** to return to clipping. Your selection is remembered. Use **Add another workspace** only when connecting a new integration. Removing a connection requires first finishing or removing its pending clips. Clearing a local capture never deletes its Notion page. **Delete all local clipper data** removes the encrypted vault and cannot be undone. A forgotten passphrase requires resetting local data and reconnecting.
 
 ## Verification
 

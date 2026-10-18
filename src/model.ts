@@ -10,5 +10,5 @@ export interface Job {
   pageId?: string; pageUrl?: string; inFlight?: { start: number; count: number }; error?: string; createdAt: string;
 }
 export interface Encrypted { version: 1; salt: string; iv: string; data: string }
-export interface VaultData { connections: Connection[]; jobs: Job[]; recent: Record<string, Destination> }
-export interface PublicState { exists: boolean; locked: boolean; connections: Pick<Connection, 'id' | 'name'>[]; jobs: Job[]; recent: Record<string, Destination> }
+export interface VaultData { connections: Connection[]; jobs: Job[]; recent: Record<string, Destination>; activeConnectionId?: string }
+export interface PublicState { exists: boolean; locked: boolean; connections: Pick<Connection, 'id' | 'name'>[]; jobs: Job[]; recent: Record<string, Destination>; activeConnectionId?: string }
