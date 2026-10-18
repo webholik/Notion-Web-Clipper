@@ -1,8 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
-async function connect(page: Page) {
+async function connect(page: Page, passphrase = 'a') {
   await page.goto('/popup.html');
-  await page.getByLabel('Passphrase', { exact: true }).fill('a memorable passphrase');
-  await page.getByLabel('Confirm passphrase').fill('a memorable passphrase');
+  await page.getByLabel('Passphrase', { exact: true }).fill(passphrase);
   await page.getByRole('button', { name: 'Create secure clipper' }).click();
   await page.getByLabel('Integration token').fill('ntn_fixture_token_for_testing_only');
   await page.getByRole('button', { name: 'Connect to Notion' }).click();
@@ -44,7 +43,7 @@ test('locks and decrypts connections after a page restart, rejects a wrong passp
   await page.getByRole('button', { name: 'Unlock clipper' }).click();
   await expect(page.getByRole('status').first()).toContainText('Could not unlock');
   await page.reload();
-  await page.getByLabel('Passphrase', { exact: true }).fill('a memorable passphrase');
+  await page.getByLabel('Passphrase', { exact: true }).fill('a');
   await page.getByRole('button', { name: 'Unlock clipper' }).click();
   await expect(page.getByLabel('Workspace', { exact: true })).toContainText('Personal workspace');
 });
@@ -66,4 +65,12 @@ test('runs the packaged article extractor in a real browser without mutating the
   expect(capture.blocks.length).toBeGreaterThan(5);
   expect(capture.title).toBe('Browser article');
   expect(await page.locator('article').innerText()).toBe(before);
+});
+
+test('allows an empty passphrase through setup, persistence and unlocking', async ({ page }) => {
+  await connect(page, '');
+  await expect(page.getByLabel('Confirm passphrase')).toHaveCount(0);
+  await page.reload();
+  await page.getByRole('button', { name: 'Unlock clipper' }).click();
+  await expect(page.getByLabel('Workspace', { exact: true })).toContainText('Personal workspace');
 });

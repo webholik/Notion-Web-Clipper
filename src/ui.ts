@@ -101,9 +101,8 @@ function renderState(next: PublicState) {
   show('clip', !state.locked && !isOptions && state.connections.length > 0);
   show('privacy', isOptions);
   $('vault-title').textContent = state.exists ? 'Welcome back.' : 'Your clipper, your workspace.';
-  $('vault-copy').textContent = state.exists ? 'Unlock your connections and pick up where you left off.' : 'Create a passphrase to encrypt your Notion tokens and captures on this device. Use at least 12 characters.';
+  $('vault-copy').textContent = state.exists ? 'Unlock your connections and pick up where you left off.' : 'Create a passphrase to encrypt your Notion tokens and captures on this device.';
   $('unlock').textContent = state.exists ? 'Unlock clipper' : 'Create secure clipper';
-  show('confirm-wrap', !state.exists); $<HTMLInputElement>('confirm-passphrase').required = !state.exists;
   $<HTMLInputElement>('passphrase').autocomplete = state.exists ? 'current-password' : 'new-password';
   if (state.locked) { $<HTMLInputElement>('token').value = ''; lastConnections = ''; selectDestination(); }
   renderConnections(); renderJobs(); updateSave();
@@ -148,9 +147,8 @@ async function searchDestinations(append = false) {
 
 $('unlock-form').addEventListener('submit', e => {
   e.preventDefault(); void perform($('unlock'), async () => {
-    if (!state.exists && value('passphrase') !== value('confirm-passphrase')) throw new Error('The passphrases do not match.');
     const next = await send<PublicState>('UNLOCK', { passphrase: value('passphrase') });
-    $<HTMLInputElement>('passphrase').value = ''; $<HTMLInputElement>('confirm-passphrase').value = '';
+    $<HTMLInputElement>('passphrase').value = '';
     renderState(next);
   });
 });

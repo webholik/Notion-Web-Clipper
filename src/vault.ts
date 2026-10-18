@@ -9,7 +9,6 @@ async function derive(passphrase: string, salt: Uint8Array) {
 }
 // A new salt and 96-bit nonce are generated for every persisted snapshot.
 export async function seal(value: unknown, passphrase: string): Promise<Encrypted> {
-  if (passphrase.length < 12) throw new Error('Use a passphrase with at least 12 characters.');
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const data = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, await derive(passphrase, salt), new TextEncoder().encode(JSON.stringify(value)));

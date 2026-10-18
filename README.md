@@ -23,7 +23,7 @@ npm run build
 1. Open Firefox 142 or later and navigate to `about:debugging#/runtime/this-firefox`.
 2. Choose **Load Temporary Add-on** and select `dist/manifest.json`.
 3. Open a webpage, then open **Pocket Clipper** from Firefox's extensions menu.
-4. Create a passphrase with at least 12 characters. Keep it in your password manager: there is no recovery service.
+4. Choose a passphrase (any length, including empty). Keep it in your password manager: there is no recovery service.
 5. [Create a Notion internal integration](https://app.notion.com/developers/connections) for the workspace, with **Read content**, **Insert content** and **Update content** capabilities.
 6. In Notion, open the parent page or database you want to use, choose **••• → Connections**, and add that integration. It only appears in destination search after access is granted and indexed by Notion.
 7. Paste the integration token into the extension's setup form. Allow the Notion API permission when Firefox asks. Do not paste the token into chat or source files.

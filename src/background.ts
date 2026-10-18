@@ -11,11 +11,11 @@ let activeJob = false;
 let serial: Promise<unknown> = Promise.resolve();
 const empty = (): VaultData => ({ connections: [], jobs: [], recent: {} });
 async function persist() {
-  if (!data || !passphrase) throw new Error('Unlock your clipper first.');
+  if (!data || passphrase === undefined) throw new Error('Unlock your clipper first.');
   await browser.storage.local.set({ vault: await seal(data, passphrase) });
 }
 function requireVault(): VaultData {
-  if (!data || !passphrase) throw new Error('Unlock your clipper first.');
+  if (!data || passphrase === undefined) throw new Error('Unlock your clipper first.');
   return data;
 }
 async function state(): Promise<PublicState> {
@@ -57,7 +57,7 @@ async function handle(message: any) {
   lastActivity = Date.now();
   if (message.type === 'CAPTURE') return capture();
   if (message.type === 'UNLOCK') {
-    if (typeof message.passphrase !== 'string' || message.passphrase.length > 1000) throw new Error('Enter your passphrase.');
+    if (typeof message.passphrase !== 'string') throw new Error('Enter your passphrase.');
     const stored = (await browser.storage.local.get('vault')).vault as Encrypted | undefined;
     const unlocked = stored ? await unseal<VaultData>(stored, message.passphrase) : empty();
     if (!Array.isArray(unlocked.connections) || !Array.isArray(unlocked.jobs) || !unlocked.recent) throw new Error('The clipper vault is invalid.');
