@@ -3,10 +3,12 @@
 ## Verified locally
 
 - TypeScript compilation and extension bundling.
-- Sixteen unit/integration tests: content extraction, URL safety, rich-text limits, encryption, destination mapping, bounded writes and recovery after ambiguous responses.
-- Eight real Chrome browser tests: personal setup and saving, append reconciliation, lock/unlock across reload, a 320px link-only fallback, the packaged article extractor, empty-passphrase setup and unlocking, returning to saved workspaces, and remembering the selected workspace after reload.
+- Nineteen unit/integration tests: content extraction, URL safety, rich-text limits, encryption, destination mapping, bounded writes and recovery after ambiguous responses.
+- Eleven real Chrome browser tests: personal setup and saving, append reconciliation, lock/unlock across reload, a 320px link-only fallback, the packaged article extractor, empty-passphrase setup and unlocking, returning to saved workspaces, remembering the selected workspace after reload, filtering search results as the user types, live local-app routing and rejected-token errors.
 - Actual desktop Firefox temporary add-on installation and nine integration checks using local Notion fixtures: background messaging, workspace setup, destination search, content script capture, rejection of privileged requests from webpage content scripts, save completion, encrypted storage, locking and decryption.
 - Visual inspection of the 390px saved-article interface. No browser console errors in the main flow.
+
+The local server tests also verify the fixed upstream origin, bridge-key/origin checks, route allowlisting, payload bounds and rate-limit forwarding.
 
 The fixture tests execute application code; only browser APIs (in Chrome UI tests) and Notion HTTP responses are substituted. The Firefox checks use actual extension APIs. No live Notion token was available, and no requests were sent to a real workspace.
 
@@ -28,3 +30,7 @@ The runtime dependency is Mozilla Readability. `npm audit --omit=dev` reported z
 - Submit the unsigned package to Mozilla for unlisted signing before normal persistent installation in release Firefox. No signing credentials were available, and no upload was performed.
 
 The existing plan's proposed public OAuth backend is intentionally replaced by a direct personal integration-token connection, following the user's confirmed “Personal use first” direction.
+
+## Live local app update
+
+`npm run preview` now serves the real Notion API bridge on loopback port 4173. Demo fixtures require `npm run demo` on 4174. Browser tests isolate both transports on 4174/4175 and never use the user's vault on 4173. Existing local connections are preserved; a token previously accepted by the demo is only valid if Notion accepts it. The local app supports real destination search and link saves; full webpage extraction remains an extension capability.

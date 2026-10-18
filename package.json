@@ -6,14 +6,15 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx --test tests/*.test.ts",
+    "test": "node --import tsx --test tests/*.test.ts tests/*.test.mjs",
     "test:browser": "playwright test",
     "lint": "web-ext lint --source-dir dist --no-config-discovery",
     "package": "npm run build && node scripts/package.mjs",
     "check": "npm run typecheck && npm test && npm run build && npm run lint",
     "dev": "npm run build && web-ext run --source-dir dist --firefox /Applications/Firefox.app/Contents/MacOS/firefox",
     "preview": "npm run build && node scripts/preview.mjs",
-    "test:firefox": "npm run build && node scripts/test-firefox.mjs"
+    "test:firefox": "npm run build && node scripts/test-firefox.mjs",
+    "demo": "npm run build && node scripts/preview.mjs --demo --port=4174"
   },
   "engines": {
     "node": ">=22"

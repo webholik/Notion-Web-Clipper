@@ -106,3 +106,14 @@ test('remembers the chosen workspace across locking and reopening', async ({ pag
   await page.getByRole('button', { name: 'Use Work', exact: true }).click();
   await expect(page.getByLabel('Workspace', { exact: true })).toContainText('Work');
 });
+
+test('filters destinations while typing and clears stale sample results for no matches', async ({ page }) => {
+  await connect(page);
+  await page.getByRole('button', { name: 'Save to', exact: true }).click();
+  await page.getByLabel('Search pages and databases').fill('Article');
+  await expect(page.getByRole('button', { name: 'Article library Database' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Reading room Page' })).toHaveCount(0);
+  await page.getByLabel('Search pages and databases').fill('Notes');
+  await expect(page.getByText('No more matches.', { exact: false })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Article library Database' })).toHaveCount(0);
+});

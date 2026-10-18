@@ -19,7 +19,12 @@ window.fetch = async (url, options = {}) => {
   const body = options.body ? JSON.parse(options.body) : undefined;
   window.__requests.push({ path: String(url).split('/v1/')[1], method: options.method, body });
   if (String(url).endsWith('users/me')) return Response.json({ object: 'user', id: fixtureId, name: 'Personal', bot: { workspace_name: 'Personal workspace' } });
-  if (String(url).endsWith('/search')) return Response.json({ results: [{ object: 'page', id: fixtureId, properties: { title: { type: 'title', title: [{ plain_text: 'Reading room' }] } } }, { object: 'data_source', id: fixtureId, title: [{ plain_text: 'Article library' }], properties: { Name: { id: 'title', type: 'title' }, URL: { id: 'url', type: 'url' } } }], has_more: false });
+  if (String(url).endsWith('/search')) {
+    const result = { results: [{ object: 'page', id: fixtureId, properties: { title: { type: 'title', title: [{ plain_text: 'Reading room' }] } } }, { object: 'data_source', id: fixtureId, title: [{ plain_text: 'Article library' }], properties: { Name: { id: 'title', type: 'title' }, URL: { id: 'url', type: 'url' } } }], has_more: false };
+    const query = String(body?.query || '').toLowerCase();
+    result.results = result.results.filter(row => JSON.stringify(row.object === 'page' ? row.properties.title.title : row.title).toLowerCase().includes(query));
+    return Response.json(result);
+  }
   if (String(url).includes('/data_sources/')) return Response.json({ properties: { Name: { id: 'title', type: 'title' }, URL: { id: 'url', type: 'url' } } });
   if (String(url).endsWith('/pages') && options.method === 'POST') { contents = [...body.children]; return Response.json({ id: fixturePageId, url: 'https://www.notion.so/' + fixturePageId }); }
   if (String(url).includes('/children')) {
@@ -53,6 +58,6 @@ window.browser = {
 };
 document.addEventListener('DOMContentLoaded', () => {
   const ribbon = document.createElement('div'); ribbon.textContent = 'LOCAL DEMO · Fixture workspace · No Notion requests';
-  ribbon.style.cssText = 'padding:8px;text-align:center;font:10px system-ui;background:#e7eadf;color:#234d3d';
+  ribbon.className = 'runtime-banner';
   document.body.prepend(ribbon);
 });

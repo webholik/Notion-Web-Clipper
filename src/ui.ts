@@ -10,6 +10,7 @@ let capture: Capture | undefined;
 let selected: Destination | undefined;
 let cursor: string | undefined;
 let searchSequence = 0;
+let searchTimer: ReturnType<typeof setTimeout> | undefined;
 let saveBusy = false;
 let lastConnections = '';
 const value = (id: string) => $<HTMLInputElement>(id).value;
@@ -129,6 +130,13 @@ async function captureCurrent() {
   capture = undefined; updateSave();
   try {
     capture = await send<Capture>('CAPTURE');
+    if (!capture.url) {
+      capture = undefined;
+      $('source').textContent = 'Add a webpage URL to get started';
+      $('capture-summary').textContent = 'NO PAGE SELECTED';
+      $('excerpt').textContent = '';
+      updateSave(); return;
+    }
     $('source').textContent = new URL(capture.url).hostname;
     $<HTMLTextAreaElement>('clip-title').value = capture.title;
     $('excerpt').textContent = capture.excerpt || (capture.blocks.length ? 'Article captured and ready to save.' : 'Keep a bookmark to this page.');
@@ -145,8 +153,10 @@ async function captureCurrent() {
   updateSave();
 }
 async function searchDestinations(append = false) {
+  clearTimeout(searchTimer);
   const sequence = ++searchSequence;
   const connectionId = workspace(); const query = value('search');
+  if (!append) { $('destinations').replaceChildren(); cursor = undefined; show('more', false); }
   $('destination-status').textContent = 'Searching your shared pages and databases…';
   try {
     const result = await send<{ items: Destination[]; cursor?: string }>('SEARCH', { connectionId, query, ...(append && cursor ? { cursor } : {}) });
@@ -159,7 +169,13 @@ async function searchDestinations(append = false) {
       const title = document.createElement('span'); title.textContent = item.name;
       const kind = document.createElement('small'); kind.textContent = item.kind === 'page' ? 'Page' : 'Database'; option.append(title, kind); $('destinations').append(option);
     }
-  } catch (e) { $('destination-status').textContent = ''; throw e; }
+  } catch (e) {
+    if (sequence === searchSequence) {
+      $('destinations').replaceChildren();
+      $('destination-status').textContent = e instanceof Error ? e.message : 'Could not search Notion. Try again.';
+    }
+    throw e;
+  }
 }
 
 $('unlock-form').addEventListener('submit', e => {
@@ -204,6 +220,14 @@ $('choose-destination').addEventListener('click', () => {
   if (opening) { $('search').focus(); void perform($('choose-destination'), () => searchDestinations()); }
 });
 $('search-form').addEventListener('submit', e => { e.preventDefault(); void perform($<HTMLButtonElement>('search-form').querySelector('button')!, () => searchDestinations()); });
+$('search').addEventListener('input', () => {
+  clearTimeout(searchTimer); searchSequence++;
+  $('destinations').replaceChildren(); show('more', false);
+  $('destination-status').textContent = 'Searching…';
+  searchTimer = setTimeout(() => {
+    if (!$('destination-picker').hidden) void searchDestinations().catch(() => {});
+  }, 300);
+});
 $('more').addEventListener('click', () => void perform($('more'), () => searchDestinations(true)));
 $('save').addEventListener('click', () => void perform($('save'), async () => {
   saveBusy = true; $('save').textContent = 'Saving your page…'; updateSave();

@@ -31,6 +31,18 @@ npm run build
 
 Temporary add-ons are removed when Firefox restarts. Use them for testing, not as the only copy of pending captures. For persistent installation, use a Mozilla-signed build.
 
+## Local app with your real Notion workspace
+
+Run `npm run preview` and open `http://127.0.0.1:4173/popup.html`. This now uses the **live Notion API**. Unlock your saved connection, open **Save to**, and type a database name. Searches update as you type. Only databases/pages shared with the selected integration can appear.
+
+The local app routes requests through a loopback-only API bridge to work around browser cross-origin restrictions. It forwards only the Notion operations the clipper uses, to the fixed HTTPS Notion API origin. It rejects foreign origins and requires a per-server bridge key; tokens are not logged or stored by the server. The encrypted browser vault remains on this device. Do not expose this development server on a public interface.
+
+Previously saved local connections remain available. Earlier versions of this preview accepted tokens without authenticating them, so Notion may now reject a placeholder/invalid token. If that happens, remove that connection in Settings and reconnect with your real internal integration token. Authentication is checked by Notion before a new connection is saved.
+
+In the local app, paste a **Webpage URL** and choose **Use this link** to save a bookmark. Full article capture requires the Firefox extension, which can read the actual browser page. The local app does not fetch arbitrary website URLs or display sample article content.
+
+For an offline sample UI with no Notion requests, run `npm run demo` on port **4174**. Automated browser tests use separate servers on ports 4174 and 4175, leaving the user's live app and saved connections on 4173 untouched.
+
 ## Test on Android
 
 Use Firefox 142+ on the phone, enable Android USB debugging and Firefox **Remote debugging via USB**, and connect the device to this computer. Install Android Platform Tools if not already available.
@@ -75,10 +87,11 @@ After unlocking, use the **Workspace** selector in the clipping view to choose a
 npm run check             # TypeScript, unit/integration tests, build and Mozilla lint
 npm run test:browser      # Real Chrome, 390px and 320px layouts; local fake Notion API
 npm run test:firefox      # Actual Firefox add-on in a temporary profile; local fake Notion API
-npm run preview          # Local fixture demo at http://127.0.0.1:4173/popup.html
+npm run preview          # Live local Notion app at http://127.0.0.1:4173/popup.html
+npm run demo             # Offline fixture demo at http://127.0.0.1:4174/popup.html
 ```
 
-Browser tests use installed Google Chrome. Firefox tests use the standard macOS Firefox path by default; set `FIREFOX_BINARY` to override it. The preview and test fixtures are not included in the extension package, and never contact Notion.
+Browser tests use installed Google Chrome. Firefox tests use the standard macOS Firefox path by default; set `FIREFOX_BINARY` to override it. The local-app bridge and test fixtures are not included in the extension package. The live local app contacts Notion; demo mode and automated tests use fixture responses.
 
 The included checks verify extraction, schema mapping, encryption, interrupted writes, actual Firefox content-script injection and privileged-message rejection. A real Android device and a real Notion token are still needed to validate the live end-to-end experience. See [validation notes](docs/validation.md).
 
