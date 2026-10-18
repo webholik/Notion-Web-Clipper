@@ -1,8 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
-async function connect(page: Page, passphrase = 'a') {
+import { seal } from '../../src/vault';
+async function connect(page: Page) {
   await page.goto('/popup.html');
-  await page.getByLabel('Passphrase', { exact: true }).fill(passphrase);
-  await page.getByRole('button', { name: 'Create secure clipper' }).click();
   await page.getByLabel('Integration token').fill('ntn_fixture_token_for_testing_only');
   await page.getByRole('button', { name: 'Connect to Notion' }).click();
   await expect(page.getByRole('heading', { name: 'Save for later.' })).toBeVisible();
@@ -16,9 +15,10 @@ test('mobile setup, article capture, destination search and successful Notion sa
   await page.getByRole('button', { name: 'Save to Notion' }).click();
   await expect(page.getByText('Saved to Notion · Article library')).toBeVisible();
   await expect(page.getByRole('link', { name: 'Open in Notion' })).toHaveAttribute('href', /notion.so/);
-  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('vault')!));
-  expect(JSON.stringify(saved)).not.toContain('ntn_fixture');
-  expect(JSON.stringify(saved)).not.toContain('My saved article');
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('clipperData')!));
+  expect(saved.data.jobs[0].title).toBe('My saved article');
+  const state = await page.evaluate(() => (window as any).browser.runtime.sendMessage({type:'STATE'}));
+  expect(JSON.stringify(state)).not.toContain('ntn_fixture');
   expect(errors).toEqual([]);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: 'artifacts/mobile-saved.png', fullPage: true });
@@ -36,15 +36,11 @@ test('recovers a successful append after a lost response without creating anothe
   expect(requests.filter((r: any) => r.path === 'pages')).toHaveLength(1);
   expect(requests.filter((r: any) => r.method === 'PATCH')).toHaveLength(1);
 });
-test('locks and decrypts connections after a page restart, rejects a wrong passphrase', async ({ page }) => {
+test('reopens saved connections without a passphrase prompt', async ({ page }) => {
   await connect(page);
-  await page.getByRole('button', { name: 'Lock', exact: true }).click();
-  await page.getByLabel('Passphrase', { exact: true }).fill('incorrect passphrase');
-  await page.getByRole('button', { name: 'Unlock clipper' }).click();
-  await expect(page.getByRole('status').first()).toContainText('Could not unlock');
   await page.reload();
-  await page.getByLabel('Passphrase', { exact: true }).fill('a');
-  await page.getByRole('button', { name: 'Unlock clipper' }).click();
+  await expect(page.getByRole('heading', { name: 'Save for later.' })).toBeVisible();
+  await expect(page.getByLabel('Passphrase', { exact: true })).toBeHidden();
   await expect(page.getByLabel('Workspace', { exact: true })).toContainText('Personal workspace');
 });
 test('keeps layout usable at 320px and shows link-only fallback', async ({ page }) => {
@@ -67,19 +63,27 @@ test('runs the packaged article extractor in a real browser without mutating the
   expect(await page.locator('article').innerText()).toBe(before);
 });
 
-test('allows an empty passphrase through setup, persistence and unlocking', async ({ page }) => {
-  await connect(page, '');
-  await expect(page.getByLabel('Confirm passphrase')).toHaveCount(0);
+test('migrates legacy encrypted connections once and never prompts on reopening', async ({ page }) => {
+  const encrypted = await seal({connections:[{id:'legacy',name:'Personal workspace',token:'ntn_fixture_token_for_testing_only'}],jobs:[],recent:{}},'old passphrase');
+  await page.addInitScript(value => {
+    if (!localStorage.getItem('clipperData')) localStorage.setItem('vault', JSON.stringify(value));
+  },encrypted);
+  await page.goto('/popup.html');
+  await page.getByLabel('Passphrase', {exact:true}).fill('wrong');
+  await page.getByRole('button',{name:'Migrate saved connections'}).click();
+  await expect(page.getByRole('status').first()).toContainText('Could not unlock');
+  await page.getByLabel('Passphrase', {exact:true}).fill('old passphrase');
+  await page.getByRole('button',{name:'Migrate saved connections'}).click();
+  await expect(page.getByRole('heading',{name:'Save for later.'})).toBeVisible();
+  expect(await page.evaluate(() => localStorage.getItem('vault'))).toBeNull();
   await page.reload();
-  await page.getByRole('button', { name: 'Unlock clipper' }).click();
-  await expect(page.getByLabel('Workspace', { exact: true })).toContainText('Personal workspace');
+  await expect(page.getByLabel('Passphrase', {exact:true})).toBeHidden();
+  await expect(page.getByLabel('Workspace', {exact:true})).toContainText('Personal workspace');
 });
 
-test('shows saved workspaces after unlocking settings and lets the user continue clipping', async ({ page }) => {
+test('shows saved workspaces in settings and lets the user continue clipping', async ({ page }) => {
   await connect(page);
   await page.getByRole('button', { name: 'Manage connections' }).click();
-  await page.getByLabel('Passphrase', { exact: true }).fill('a');
-  await page.getByRole('button', { name: 'Unlock clipper' }).click();
   await expect(page.getByRole('heading', { name: 'Your workspaces' })).toBeVisible();
   await expect(page.getByLabel('Integration token')).toBeHidden();
   await page.screenshot({ path: 'artifacts/saved-workspaces.png', fullPage: true });
@@ -88,11 +92,9 @@ test('shows saved workspaces after unlocking settings and lets the user continue
   await expect(page.getByLabel('Workspace', { exact: true })).toContainText('Personal workspace');
 });
 
-test('remembers the chosen workspace across locking and reopening', async ({ page }) => {
+test('remembers the chosen workspace across reopening', async ({ page }) => {
   await connect(page);
   await page.getByRole('button', { name: 'Manage connections' }).click();
-  await page.getByLabel('Passphrase', { exact: true }).fill('a');
-  await page.getByRole('button', { name: 'Unlock clipper' }).click();
   await page.getByRole('button', { name: 'Add another workspace' }).click();
   await page.getByLabel('Workspace label', { exact: false }).fill('Work');
   await page.getByLabel('Integration token').fill('ntn_fixture_work_token_for_testing');
@@ -100,8 +102,6 @@ test('remembers the chosen workspace across locking and reopening', async ({ pag
   await page.getByRole('button', { name: 'Use Work', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Save for later.' })).toBeVisible();
   await page.reload();
-  await page.getByLabel('Passphrase', { exact: true }).fill('a');
-  await page.getByRole('button', { name: 'Unlock clipper' }).click();
   await expect(page.locator('#workspace option:checked')).toHaveText('Work');
   await page.getByRole('button', { name: 'Use Work', exact: true }).click();
   await expect(page.getByLabel('Workspace', { exact: true })).toContainText('Work');

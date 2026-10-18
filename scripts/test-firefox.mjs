@@ -45,18 +45,18 @@ try {
         return reply.value;
       };
       try {
-        const initial = await send('STATE'); assert(initial.locked && !initial.exists, 'real background message routing');
-        await send('UNLOCK', {passphrase:'firefox test passphrase'});
+        const initial = await send('STATE'); assert(!initial.locked && initial.connections.length === 0, 'opens immediately without a passphrase');
         const connected = await send('CONNECT', {token:'ntn_fixture_token_for_testing_only',name:'Firefox workspace'});
         assert(connected.connections.length === 1, 'connect workspace');
         const search = await send('SEARCH', {connectionId:connected.connections[0].id, query:''});
         assert(search.items.length === 2, 'destination search');
         const tab = await browser.tabs.create({url:${JSON.stringify(origin)},active:true});
         await new Promise(resolve => {
-          const onUpdated = (id, info) => { if(id === tab.id && info.status === 'complete') {browser.tabs.onUpdated.removeListener(onUpdated);resolve();} };
+          const onUpdated = (id, info, updatedTab) => { if(id === tab.id && info.status === 'complete' && updatedTab.url?.startsWith(${JSON.stringify(origin)})) {browser.tabs.onUpdated.removeListener(onUpdated);resolve();} };
           browser.tabs.onUpdated.addListener(onUpdated);
-          browser.tabs.get(tab.id).then(t => {if(t.status === 'complete') {browser.tabs.onUpdated.removeListener(onUpdated);resolve();}});
+          browser.tabs.get(tab.id).then(t => {if(t.status === 'complete' && t.url?.startsWith(${JSON.stringify(origin)})) {browser.tabs.onUpdated.removeListener(onUpdated);resolve();}});
         });
+        await browser.tabs.update(tab.id,{active:true});
         const capture = await send('CAPTURE');
         assert(capture.title === 'Real Firefox article' && capture.blocks.length >= 8, 'actual Firefox content script injection and article capture');
         await browser.scripting.executeScript({target:{tabId:tab.id},func:async () => {
@@ -65,11 +65,10 @@ try {
         assert((await send('STATE')).connections.length === 1, 'reject privileged messages from webpage content script');
         const saved = await send('SAVE',{connectionId:connected.connections[0].id,capture,destination:search.items[0],title:capture.title,mode:'article'});
         assert(saved.jobs[0].status === 'done', 'real extension save flow with fixture Notion API');
-        const stored = JSON.stringify(await browser.storage.local.get('vault'));
-        assert(!stored.includes('ntn_fixture') && !stored.includes('Real Firefox article'), 'encrypted browser storage');
-        await send('LOCK'); assert((await send('STATE')).locked, 'lock vault');
-        await send('UNLOCK',{passphrase:'firefox test passphrase'});
-        assert((await send('STATE')).jobs[0].status === 'done', 'decrypt persisted captures');
+        const stored = await browser.storage.local.get('clipperData');
+        assert(stored.clipperData.data.jobs[0].status === 'done', 'persistent browser storage');
+        assert(!JSON.stringify(await send('STATE')).includes('ntn_fixture'), 'tokens omitted from UI state');
+        assert(!(await send('STATE')).locked, 'no auto-lock or repeated passphrase prompt');
         await fetch(${JSON.stringify(origin + '/result')},{method:'POST',body:JSON.stringify({ok:true,checks})});
       } catch(error) {
         await fetch(${JSON.stringify(origin + '/result')},{method:'POST',body:JSON.stringify({ok:false,error:error.message,checks})});

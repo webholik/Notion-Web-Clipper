@@ -107,7 +107,7 @@ function renderJobs() {
 }
 function renderState(next: PublicState) {
   state = next;
-  show('loading', false); show('vault', state.locked); show('lock', !state.locked); show('settings', !isOptions || showingClip);
+  show('loading', false); show('vault', state.locked); show('settings', !isOptions || showingClip);
   show('connections', !state.locked && (!showingClip || state.connections.length === 0));
   show('clip', !state.locked && showingClip && state.connections.length > 0);
   show('privacy', isOptions && !showingClip);
@@ -118,9 +118,9 @@ function renderState(next: PublicState) {
   show('add-workspace', hasConnections);
   $('add-workspace').textContent = addingWorkspace ? 'Cancel adding workspace' : 'Add another workspace';
   $('add-workspace').setAttribute('aria-expanded', String(addingWorkspace));
-  $('vault-title').textContent = state.exists ? 'Welcome back.' : 'Your clipper, your workspace.';
-  $('vault-copy').textContent = state.exists ? 'Unlock your connections and pick up where you left off.' : 'Create a passphrase to encrypt your Notion tokens and captures on this device.';
-  $('unlock').textContent = state.exists ? 'Unlock clipper' : 'Create secure clipper';
+  $('vault-title').textContent = 'Keep your saved connections';
+  $('vault-copy').textContent = 'Enter your previous passphrase one last time to migrate your saved workspaces and clips. After this, the clipper opens without a passphrase.';
+  $('unlock').textContent = 'Migrate saved connections';
   $<HTMLInputElement>('passphrase').autocomplete = state.exists ? 'current-password' : 'new-password';
   if (state.locked) { $<HTMLInputElement>('token').value = ''; lastConnections = ''; selectDestination(); }
   renderConnections(); renderJobs(); updateSave();
@@ -204,7 +204,6 @@ $('add-workspace').addEventListener('click', () => {
   addingWorkspace = !addingWorkspace; renderState(state);
   if (addingWorkspace) $('connection-name').focus();
 });
-$('lock').addEventListener('click', () => void perform($('lock'), async () => { renderState(await send('LOCK')); }));
 $('forget').addEventListener('click', () => void perform($('forget'), async () => {
   if (confirm('Delete every local connection and capture? This cannot be undone. Your pages in Notion will remain.')) renderState(await send('RESET', { confirm: 'DELETE' }));
 }));

@@ -7,7 +7,7 @@ A personal Firefox extension for Android (and desktop Firefox 142+) that saves r
 - Capture the current page with Mozilla Readability, without changing the webpage.
 - Save editable headings, paragraphs, lists, links, quotes, code and external images, or save just the source link.
 - Rename clips, switch between workspace integrations, search destinations, and reuse the last destination per workspace.
-- Store tokens and captured content in a passphrase-encrypted local vault (AES-256-GCM, PBKDF2-SHA256 with 600,000 iterations).
+- Remember tokens, workspace choices and captures in local browser storage, without a separate clipper password.
 - Persist progress before writes; resume interrupted saves without blindly repeating page creation or appending duplicate content.
 - Open completed pages in Notion and clear local captures independently of the Notion page.
 
@@ -23,7 +23,7 @@ npm run build
 1. Open Firefox 142 or later and navigate to `about:debugging#/runtime/this-firefox`.
 2. Choose **Load Temporary Add-on** and select `dist/manifest.json`.
 3. Open a webpage, then open **Pocket Clipper** from Firefox's extensions menu.
-4. Choose a passphrase (any length, including empty). Keep it in your password manager: there is no recovery service.
+4. New installations open directly into workspace setup—no clipper passphrase is required.
 5. [Create a Notion internal integration](https://app.notion.com/developers/connections) for the workspace, with **Read content**, **Insert content** and **Update content** capabilities.
 6. In Notion, open the parent page or database you want to use, choose **••• → Connections**, and add that integration. It only appears in destination search after access is granted and indexed by Notion.
 7. Paste the integration token into the extension's setup form. Allow the Notion API permission when Firefox asks. Do not paste the token into chat or source files.
@@ -33,9 +33,9 @@ Temporary add-ons are removed when Firefox restarts. Use them for testing, not a
 
 ## Local app with your real Notion workspace
 
-Run `npm run preview` and open `http://127.0.0.1:4173/popup.html`. This now uses the **live Notion API**. Unlock your saved connection, open **Save to**, and type a database name. Searches update as you type. Only databases/pages shared with the selected integration can appear.
+Run `npm run preview` and open `http://127.0.0.1:4173/popup.html`. This now uses the **live Notion API**. Choose your saved connection, open **Save to**, and type a database name. Searches update as you type. Only databases/pages shared with the selected integration can appear.
 
-The local app routes requests through a loopback-only API bridge to work around browser cross-origin restrictions. It forwards only the Notion operations the clipper uses, to the fixed HTTPS Notion API origin. It rejects foreign origins and requires a per-server bridge key; tokens are not logged or stored by the server. The encrypted browser vault remains on this device. Do not expose this development server on a public interface.
+The local app routes requests through a loopback-only API bridge to work around browser cross-origin restrictions. It forwards only the Notion operations the clipper uses, to the fixed HTTPS Notion API origin. It rejects foreign origins and requires a per-server bridge key; tokens are not logged or stored by the server. Connections and captures remain in local browser storage on this device, without additional application encryption. Do not expose this development server on a public interface.
 
 Previously saved local connections remain available. Earlier versions of this preview accepted tokens without authenticating them, so Notion may now reject a placeholder/invalid token. If that happens, remove that connection in Settings and reconnect with your real internal integration token. Authentication is checked by Notion before a new connection is saved.
 
@@ -55,7 +55,7 @@ npx web-ext run --source-dir dist --target firefox-android --android-device DEVI
 
 Replace `DEVICE_ID` with the value printed by `adb devices`. Firefox Beta and Nightly use different application IDs; use the ID of the browser installed on the device. On this Mac, adb is available at `/Users/ankitsaini/Library/Android/sdk/platform-tools/adb`; add its directory to PATH or pass `--adb-bin` with that path.
 
-In Firefox, visit an article and open **Extensions → Pocket Clipper**. Complete setup on the phone, choose a destination, and save. Test small-screen scrolling, the software keyboard, backgrounding Firefox during a save, returning after a process restart, and unlocking/resuming a pending clip.
+In Firefox, visit an article and open **Extensions → Pocket Clipper**. Complete setup on the phone, choose a destination, and save. Test small-screen scrolling, the software keyboard, backgrounding Firefox during a save, returning after a process restart, and resuming a pending clip.
 
 [Mozilla's Android extension development instructions](https://extensionworkshop.com/documentation/develop/developing-extensions-for-firefox-for-android/) describe device configuration and debugging.
 
@@ -71,15 +71,19 @@ For personal use, submit the ZIP through the [AMO Developer Hub](https://addons.
 
 See [Mozilla signing and distribution](https://extensionworkshop.com/documentation/publish/signing-and-distribution-overview/).
 
-## Interrupted saves and locking
+## Remembered connections and interrupted saves
 
-Each capture is encrypted and persisted before its first Notion write. The background script holds the unlocked vault in memory; the UI never receives stored integration tokens. The vault locks after 15 minutes without activity when next checked, on explicit Lock, or whenever Firefox unloads the background context. Pending clips remain encrypted on disk. Retry requires unlocking and pressing **Resume**; no guarantee of unattended background execution is made on Android.
+Your workspace connections, selected destination and pending captures are saved on this device and loaded automatically when the clipper opens. There is no automatic lock or recurring passphrase prompt. The UI state omits stored tokens, and webpage content scripts cannot invoke privileged actions. Firefox stores the extension's data in its local extension storage; the local web app uses browser local storage. Neither adds application-level encryption in this version.
+
+Existing encrypted data from earlier builds is preserved. If its old passphrase was blank, it migrates automatically. Otherwise, enter that previous passphrase **once** using **Migrate saved connections**. After the replacement is saved, the old encrypted record is removed; future visits need no passphrase. If you do not remember the old passphrase, use Settings to delete local data and reconnect instead.
+
+Each capture is persisted before its first Notion write. Pending saves can be resumed without unlocking. Mobile OS background execution limits still apply; open the clipper and press Resume if a save was interrupted.
 
 If a content append times out, Resume reads the page and compares the saved content with the capture before continuing. If content differs, it pauses rather than guessing. Avoid editing a partially saved page until the clip is complete.
 
 If page creation itself times out, the result may be unknown. The extension will not create a second page automatically. Check the destination in Notion and paste the created page's URL into the recovery form. The extension verifies the parent and existing content before attaching it. If no page exists, remove the capture and clip again after checking Notion.
 
-After unlocking, use the **Workspace** selector in the clipping view to choose a saved connection. In **Settings**, saved connections appear under **Your workspaces**; choose **Use [workspace name]** to return to clipping. Your selection is remembered. Use **Add another workspace** only when connecting a new integration. Removing a connection requires first finishing or removing its pending clips. Clearing a local capture never deletes its Notion page. **Delete all local clipper data** removes the encrypted vault and cannot be undone. A forgotten passphrase requires resetting local data and reconnecting.
+Use the **Workspace** selector in the clipping view to choose a saved connection. In **Settings**, saved connections appear under **Your workspaces**; choose **Use [workspace name]** to return to clipping. Your selection is remembered. Use **Add another workspace** only when connecting a new integration. Removing a connection requires first finishing or removing its pending clips. Clearing a local capture never deletes its Notion page. **Delete all local clipper data** removes saved connections and captures and cannot be undone. Removing a connection or deleting local data is how to forget saved access.
 
 ## Verification
 
@@ -93,7 +97,7 @@ npm run demo             # Offline fixture demo at http://127.0.0.1:4174/popup.h
 
 Browser tests use installed Google Chrome. Firefox tests use the standard macOS Firefox path by default; set `FIREFOX_BINARY` to override it. The local-app bridge and test fixtures are not included in the extension package. The live local app contacts Notion; demo mode and automated tests use fixture responses.
 
-The included checks verify extraction, schema mapping, encryption, interrupted writes, actual Firefox content-script injection and privileged-message rejection. A real Android device and a real Notion token are still needed to validate the live end-to-end experience. See [validation notes](docs/validation.md).
+The included checks verify extraction, schema mapping, persistence, legacy migration, interrupted writes, actual Firefox content-script injection and privileged-message rejection. A real Android device and a real Notion token are still needed to validate the live end-to-end experience. See [validation notes](docs/validation.md).
 
 ## Current boundaries
 
@@ -114,12 +118,13 @@ src/content.ts          Readability extraction and Notion block conversion
 src/shared.ts           Safe URLs and rich text helpers
 src/notion.ts           Fixed-origin Notion API client
 src/jobs.ts             Save journal, reconciliation and recovery
-src/vault.ts            Local encryption
+src/storage.ts          Automatic persistence and one-time legacy migration
+src/vault.ts            Legacy encryption format for migration
 src/background.ts       Browser APIs, connection management and message authorization
 src/ui.ts               Mobile clipping and settings interface
 public/                 Manifest, HTML, styles and icon
 scripts/                Build, packaging, isolated Firefox checks and local demo
-tests/                  Content, vault, API, recovery and browser tests
+tests/                  Content, storage, API, recovery and browser tests
 ```
 
 API behavior follows [Notion page creation](https://developers.notion.com/reference/post-page), [data source search](https://developers.notion.com/reference/post-search) and [block appends](https://developers.notion.com/reference/patch-block-children), pinned to API version `2026-03-11`. Mozilla Readability is distributed under Apache-2.0; its license is included in the extension package.

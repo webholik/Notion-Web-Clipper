@@ -1,27 +1,28 @@
-import type { Capture, Destination, Encrypted, Job, PublicState, VaultData } from './model';
-import { seal, unseal } from './vault';
+import type { Capture, Destination, Job, PublicState, VaultData } from './model';
+import { readLocalData, migrateLegacy, writeLocalData } from './storage';
 import { NotionClient, validId } from './notion';
 import { safeUrl } from './shared';
 import { attachPage, runJob } from './jobs';
 
 let data: VaultData | undefined;
-let passphrase: string | undefined;
-let lastActivity = 0;
-let activeJob = false;
+let loaded: Promise<void> | undefined;
 let serial: Promise<unknown> = Promise.resolve();
 const empty = (): VaultData => ({ connections: [], jobs: [], recent: {} });
+async function ensureLoaded() {
+  if (!loaded) loaded = readLocalData(browser.storage.local).then(result => {data = result.data;}).catch(error => {loaded = undefined; throw error;});
+  await loaded;
+}
 async function persist() {
-  if (!data || passphrase === undefined) throw new Error('Unlock your clipper first.');
-  await browser.storage.local.set({ vault: await seal(data, passphrase) });
+  if (!data) throw new Error('Migrate your saved connections first.');
+  await writeLocalData(browser.storage.local,data);
 }
 function requireVault(): VaultData {
-  if (!data || passphrase === undefined) throw new Error('Unlock your clipper first.');
+  if (!data) throw new Error('Migrate your saved connections first.');
   return data;
 }
 async function state(): Promise<PublicState> {
-  if (!activeJob && Date.now() - lastActivity > 15 * 60_000) { data = undefined; passphrase = undefined; }
-  const exists = !!(await browser.storage.local.get('vault')).vault;
-  return { exists, locked: !data, connections: data?.connections.map(({ id, name }) => ({ id, name })) ?? [], jobs: data?.jobs ?? [], recent: data?.recent ?? {}, activeConnectionId: data?.activeConnectionId ?? data?.connections[0]?.id };
+  await ensureLoaded();
+  return { exists: !data, locked: !data, connections: data?.connections.map(({ id, name }) => ({ id, name })) ?? [], jobs: data?.jobs ?? [], recent: data?.recent ?? {}, activeConnectionId: data?.activeConnectionId ?? data?.connections[0]?.id };
 }
 function client(connectionId: string) {
   const connection = requireVault().connections.find(c => c.id === connectionId);
@@ -47,30 +48,21 @@ function destination(value: unknown): Destination {
   return { id: d.id, kind: d.kind, name: d.name.slice(0, 300), titleProperty: d.titleProperty, ...(d.urlProperty ? { urlProperty: d.urlProperty } : {}) };
 }
 async function execute(job: Job) {
-  activeJob = true;
-  try { await runJob(job, client(job.connectionId), persist); }
-  finally { activeJob = false; }
+  await runJob(job, client(job.connectionId), persist);
 }
 
 async function handle(message: any) {
+  await ensureLoaded();
   if (message.type === 'STATE') return state();
-  lastActivity = Date.now();
   if (message.type === 'CAPTURE') return capture();
   if (message.type === 'UNLOCK') {
-    if (typeof message.passphrase !== 'string') throw new Error('Enter your passphrase.');
-    const stored = (await browser.storage.local.get('vault')).vault as Encrypted | undefined;
-    const unlocked = stored ? await unseal<VaultData>(stored, message.passphrase) : empty();
-    if (!Array.isArray(unlocked.connections) || !Array.isArray(unlocked.jobs) || !unlocked.recent) throw new Error('The clipper vault is invalid.');
-    if (!stored) {
-      await browser.storage.local.set({ vault: await seal(unlocked, message.passphrase) });
-    }
-    data = unlocked; passphrase = message.passphrase;
+    if (typeof message.passphrase !== 'string') throw new Error('Enter your previous passphrase.');
+    if (!data) data = await migrateLegacy(browser.storage.local,message.passphrase);
     return state();
   }
-  if (message.type === 'LOCK') { data = undefined; passphrase = undefined; return state(); }
   if (message.type === 'RESET') {
     if (message.confirm !== 'DELETE') throw new Error('Confirm deletion first.');
-    await browser.storage.local.remove('vault'); data = undefined; passphrase = undefined;
+    data = empty(); await persist(); await browser.storage.local.remove('vault');
     return state();
   }
   const vault = requireVault();

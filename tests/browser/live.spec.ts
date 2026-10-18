@@ -16,7 +16,6 @@ test('local live app authenticates and searches through the bridge without retur
   });
   await page.goto('/popup.html');
   await expect(page.getByText('LOCAL APP · Live Notion API')).toBeVisible();
-  await page.getByRole('button',{name:'Create secure clipper'}).click();
   await page.getByLabel('Integration token').fill('ntn_fixture_live_transport_testing');
   await page.getByRole('button',{name:'Connect to Notion'}).click();
   await page.getByRole('button',{name:'Save to',exact:true}).click();
@@ -35,7 +34,6 @@ test('local live app authenticates and searches through the bridge without retur
 test('displays rejected-token errors instead of accepting a fake workspace connection', async ({page}) => {
   await page.route('**/api/notion/v1/users/me', route => route.fulfill({status:401,json:{object:'error',code:'unauthorized'}}));
   await page.goto('/popup.html');
-  await page.getByRole('button',{name:'Create secure clipper'}).click();
   await page.getByLabel('Integration token').fill('ntn_fixture_invalid_token_testing');
   await page.getByRole('button',{name:'Connect to Notion'}).click();
   await expect(page.getByRole('status').first()).toContainText('invalid or has been revoked');
