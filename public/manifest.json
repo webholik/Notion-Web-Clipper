@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "Pocket Clipper for Notion",
+  "version": "0.1.0",
+  "description": "Save readable articles and links to your Notion pages and databases from Firefox on Android.",
+  "permissions": ["activeTab", "scripting", "storage"],
+  "optional_host_permissions": ["https://api.notion.com/*"],
+  "background": { "scripts": ["background.js"] },
+  "action": {
+    "default_title": "Clip to Notion",
+    "default_popup": "popup.html",
+    "default_icon": "icons/clip.svg"
+  },
+  "icons": { "48": "icons/clip.svg", "96": "icons/clip.svg" },
+  "options_ui": { "page": "options.html", "open_in_tab": true },
+  "browser_specific_settings": {
+    "gecko": { "id": "pocket-clipper@personal.local", "strict_min_version": "142.0", "data_collection_permissions": { "required": ["websiteContent", "authenticationInfo"] } },
+    "gecko_android": { "strict_min_version": "142.0" }
+  },
+  "content_security_policy": { "extension_pages": "script-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; connect-src https://api.notion.com" }
+}
