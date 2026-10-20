@@ -50,15 +50,18 @@ export interface Job {
   error?: string;
   createdAt: string;
 }
+export type SavedClip = Pick<Job, 'id' | 'title' | 'source' | 'pageUrl'> & { status: 'done' };
+export type Clip = Job | SavedClip;
+
 export interface LocalData {
   connections: Connection[];
-  jobs: Job[];
+  jobs: Clip[];
   recent: Record<string, Destination>;
   activeConnectionId?: string;
 }
 export interface PublicState {
   connections: Pick<Connection, 'id' | 'name'>[];
-  jobs: Job[];
+  jobs: Clip[];
   recent: Record<string, Destination>;
   activeConnectionId?: string;
 }

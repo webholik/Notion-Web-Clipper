@@ -1,5 +1,5 @@
 // Local app only. Never copied into the extension package.
-// Reuse the extension's real background, encryption and Notion API client.
+// Reuse the extension's real background, storage and Notion API client.
 const bridgeKey = __LOCAL_BRIDGE_KEY__;
 const nativeFetch = window.fetch.bind(window);
 let listener;

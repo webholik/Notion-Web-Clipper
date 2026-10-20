@@ -3,13 +3,12 @@
 ## Verified locally
 
 - TypeScript compilation and extension bundling.
-- Twenty-two unit/integration tests: content extraction, URL safety, rich-text limits, encryption,
-  destination mapping, bounded writes and recovery after ambiguous responses.
-- Eleven real Chrome browser tests: personal setup and saving, append reconciliation, automatic
-  reconnection across reload, a 320px link-only fallback, the packaged article extractor,
-  empty-one-time legacy migration, returning to saved workspaces, remembering the selected workspace
-  after reload, filtering search results as the user types, live local-app routing and
-  rejected-token errors.
+- Unit/integration tests: content extraction, URL safety, rich-text limits, title/link history
+  retention, destination mapping, bounded writes and recovery after ambiguous responses.
+- Real Chrome browser tests: personal setup and saving, append reconciliation, automatic
+  reconnection across reload, a 320px link-only fallback, the packaged article extractor, returning
+  to saved workspaces, remembering the selected workspace after reload, filtering search results as
+  the user types, live local-app routing and rejected-token errors.
 - Actual desktop Firefox temporary add-on installation and nine integration checks using local
   Notion fixtures: background messaging, workspace setup, destination search, content script
   capture, rejection of privileged requests from webpage content scripts, save completion,
@@ -64,16 +63,14 @@ integration-token connection, following the user's confirmed “Personal use fir
 
 `npm run preview` now serves the real Notion API bridge on loopback port 4173. Demo fixtures require
 `npm run demo` on 4174. Browser tests isolate both transports on 4174/4175 and never use the user's
-vault on 4173. Existing local connections are preserved; a token previously accepted by the demo is
-only valid if Notion accepts it. The local app supports real destination search and link saves; full
-webpage extraction remains an extension capability.
+local data on 4173. Existing local connections are preserved; a token previously accepted by the
+demo is only valid if Notion accepts it. The local app supports real destination search and link
+saves; full webpage extraction remains an extension capability.
 
-## Passphrase-free persistence update
+## Local persistence
 
-New and returning connections load automatically from version-2 local storage without a clipper
-password or inactivity timer. Legacy encrypted data is migrated only after successful decryption;
-blank legacy passphrases migrate automatically, while other existing users enter their old
-passphrase once. The new record is saved before the old encrypted record is removed. Unit tests
-cover new/reopened data, wrong migration passphrases, preserved connections and automatic
-blank-passphrase migration; browser tests cover the actual one-time migration and subsequent
-reopening without prompts. Earlier encryption/locking notes above describe the previous build only.
+Connections load automatically from version-2 local storage without a clipper password or inactivity
+timer. There is no legacy vault or migration flow. Completed history retains only five title/link
+summaries plus internal IDs and completion status. Unfinished captures retain content for recovery.
+Storage tests cover retention on both reads and writes, and browser tests verify completed records
+contain no article blocks. Clearing local history does not delete the saved Notion pages.

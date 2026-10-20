@@ -148,14 +148,15 @@ function renderJobs() {
     const statuses = {
       queued: 'Queued on this device',
       creating: 'Creating page…',
-      writing: `Saving content · ${job.next}/${job.blocks.length}`,
+      writing: job.status === 'done' ? '' : `Saving content · ${job.next}/${job.blocks.length}`,
       paused: 'Paused · ready to resume',
       uncertain: 'Check Notion before continuing',
       done: 'Saved to Notion',
     };
-    meta.textContent = `${statuses[job.status]} · ${job.destination.name}`;
+    meta.textContent =
+      job.status === 'done' ? statuses.done : `${statuses[job.status]} · ${job.destination.name}`;
     row.append(title, meta);
-    if (job.error) {
+    if (job.status !== 'done' && job.error) {
       const error = document.createElement('p');
       error.className = 'job-error';
       error.textContent = job.error;

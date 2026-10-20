@@ -83,9 +83,8 @@ npx web-ext run --source-dir dist --target firefox-android --android-device DEVI
 ```
 
 Replace `DEVICE_ID` with the value printed by `adb devices`. Firefox Beta and Nightly use different
-application IDs; use the ID of the browser installed on the device. On this Mac, adb is available at
-`/Users/ankitsaini/Library/Android/sdk/platform-tools/adb`; add its directory to PATH or pass
-`--adb-bin` with that path.
+application IDs; use the ID of the browser installed on the device. Add your Android SDK's
+`platform-tools` directory to PATH if `adb` is not found.
 
 In Firefox, visit an article and open **Extensions → Pocket Clipper**. Complete setup on the phone,
 choose a destination, and save. Test small-screen scrolling, the software keyboard, backgrounding
@@ -106,10 +105,10 @@ development testing and submission, not normal permanent installation.
 
 For personal use, submit the ZIP through the
 [AMO Developer Hub](https://addons.mozilla.org/developers/) and choose self-distribution /
-**unlisted**. Supply `pocket-clipper-source-0.1.0.zip` if source is requested; build instructions
-are `npm ci && npm run build`. Download the resulting signed XPI and follow Mozilla's current
-instructions for installing self-distributed add-ons on your Firefox Android version. No public
-store listing is necessary. No package has been uploaded or submitted by this project.
+**unlisted**. Supply `pocket-clipper-source-<version>.zip` if source is requested; build
+instructions are `npm ci && npm run build`. Download the resulting signed XPI and follow Mozilla's
+current instructions for installing self-distributed add-ons on your Firefox Android version. No
+public store listing is necessary. No package has been uploaded or submitted by this project.
 
 See
 [Mozilla signing and distribution](https://extensionworkshop.com/documentation/publish/signing-and-distribution-overview/).
@@ -121,12 +120,6 @@ loaded automatically when the clipper opens. There is no automatic lock or recur
 prompt. The UI state omits stored tokens, and webpage content scripts cannot invoke privileged
 actions. Firefox stores the extension's data in its local extension storage; the local web app uses
 browser local storage. Neither adds application-level encryption in this version.
-
-Existing encrypted data from earlier builds is preserved. If its old passphrase was blank, it
-migrates automatically. Otherwise, enter that previous passphrase **once** using **Migrate saved
-connections**. After the replacement is saved, the old encrypted record is removed; future visits
-need no passphrase. If you do not remember the old passphrase, use Settings to delete local data and
-reconnect instead.
 
 Each capture is persisted before its first Notion write. Pending saves can be resumed without
 unlocking. Mobile OS background execution limits still apply; open the clipper and press Resume if a
@@ -140,6 +133,11 @@ If page creation itself times out, the result may be unknown. The extension will
 page automatically. Check the destination in Notion and paste the created page's URL into the
 recovery form. The extension verifies the parent and existing content before attaching it. If no
 page exists, remove the capture and clip again after checking Notion.
+
+Only the five most recent completed saves are retained, with their titles, source URLs and Notion
+URLs. Full content and recovery details are kept only while a capture is unfinished. Completed
+history has no time-based expiry; each new successful save replaces the oldest retained save.
+Clearing an entry affects only local history.
 
 Use the **Workspace** selector in the clipping view to choose a saved connection. In **Settings**,
 saved connections appear under **Your workspaces**; choose **Use [workspace name]** to return to
@@ -164,7 +162,7 @@ default; set `FIREFOX_BINARY` to override it. The local-app bridge and test fixt
 included in the extension package. The live local app contacts Notion; demo mode and automated tests
 use fixture responses.
 
-The included checks verify extraction, schema mapping, persistence, legacy migration, interrupted
+The included checks verify extraction, schema mapping, persistence, bounded history, interrupted
 writes, actual Firefox content-script injection and privileged-message rejection. A real Android
 device and a real Notion token are still needed to validate the live end-to-end experience. See
 [validation notes](docs/validation.md).
@@ -184,7 +182,7 @@ device and a real Notion token are still needed to validate the live end-to-end 
   login. It does not access cross-origin frames, bypass paywalls, or load additional lazy content
   for you.
 - Oversized or unextractable articles offer an explicit link-only fallback. Maximum capture: 1,500
-  content blocks / 3 MB serialized content; at most 10 pending clips and 20 completed clips are
+  content blocks / 3 MB serialized content; at most 10 pending clips and five completed saves are
   retained.
 - Database schemas are never modified. The title and first URL property are mapped from the current
   data source schema; custom property editing is not included.
@@ -199,8 +197,7 @@ src/content.ts          Readability extraction and Notion block conversion
 src/shared.ts           Safe URLs and rich text helpers
 src/notion.ts           Fixed-origin Notion API client
 src/jobs.ts             Save journal, reconciliation and recovery
-src/storage.ts          Automatic persistence and one-time legacy migration
-src/vault.ts            Legacy encryption format for migration
+src/storage.ts          Local persistence and bounded title/link history
 src/background.ts       Browser APIs, connection management and message authorization
 src/ui.ts               Mobile clipping and settings interface
 public/                 Manifest, HTML, styles and icon

@@ -21,7 +21,11 @@ async function ensureLoaded() {
   await loaded;
 }
 
-async function persist() {
+// Put a newly completed save first, including captures resumed after newer saves.
+async function persist(completedJob?: Job) {
+  if (completedJob?.status === 'done') {
+    data.jobs = [completedJob, ...data.jobs.filter((job) => job.id !== completedJob.id)];
+  }
   await writeLocalData(browser.storage.local, data);
 }
 
@@ -150,7 +154,7 @@ async function handle(message: any) {
       return state();
     }
     case 'DISCONNECT': {
-      if (data.jobs.some((j) => j.connectionId === message.connectionId && j.status !== 'done'))
+      if (data.jobs.some((j) => j.status !== 'done' && j.connectionId === message.connectionId))
         throw new Error('Finish or remove pending clips for this workspace first.');
       data.connections = data.connections.filter((c) => c.id !== message.connectionId);
       if (data.activeConnectionId === message.connectionId)
@@ -198,25 +202,21 @@ async function handle(message: any) {
         status: 'queued',
         createdAt: new Date().toISOString(),
       };
-      data.jobs = [
-        ...data.jobs.filter((j) => j.status !== 'done'),
-        ...data.jobs.filter((j) => j.status === 'done').slice(0, 19),
-      ];
       data.jobs.unshift(job);
       data.recent[message.connectionId] = dest;
       await persist();
-      await runJob(job, client(job.connectionId), persist);
+      await runJob(job, client(job.connectionId), () => persist(job));
       return state();
     }
     case 'RESUME': {
       const job = data.jobs.find((j) => j.id === message.jobId);
-      if (!job) throw new Error('Clip not found.');
-      await runJob(job, client(job.connectionId), persist);
+      if (!job || job.status === 'done') throw new Error('Pending clip not found.');
+      await runJob(job, client(job.connectionId), () => persist(job));
       return state();
     }
     case 'ATTACH': {
       const job = data.jobs.find((j) => j.id === message.jobId);
-      if (!job) throw new Error('Clip not found.');
+      if (!job || job.status === 'done') throw new Error('Pending clip not found.');
       let id = String(message.pageId ?? '').trim();
       if (id.startsWith('https://')) {
         const url = new URL(id);
@@ -230,7 +230,7 @@ async function handle(message: any) {
       }
       await attachPage(job, id, client(job.connectionId));
       await persist();
-      await runJob(job, client(job.connectionId), persist);
+      await runJob(job, client(job.connectionId), () => persist(job));
       return state();
     }
     case 'DELETE_JOB':

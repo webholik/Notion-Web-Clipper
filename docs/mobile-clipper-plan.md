@@ -7,7 +7,7 @@ Notion validation remain outstanding.
 ## Implementation update — 18 October 2026
 
 The user approved implementation and confirmed **Personal use first**. The initial build now uses
-direct Notion internal integration tokens in an encrypted local vault, replacing the proposed public
+direct Notion internal integration tokens in local browser storage, replacing the proposed public
 OAuth backend. It includes the Firefox Android manifest, mobile UI, article/link capture, workspace
 connections, destination search, schema-aware saves and interrupted-write recovery. Source and
 installation instructions are in `README.md`; verification evidence and the remaining Android/live
