@@ -1,6 +1,6 @@
 {
   "name": "pocket-clipper-for-notion",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -10,11 +10,14 @@
     "test:browser": "playwright test",
     "lint": "web-ext lint --source-dir dist --no-config-discovery",
     "package": "npm run build && node scripts/package.mjs",
-    "check": "npm run typecheck && npm test && npm run build && npm run lint",
-    "dev": "npm run build && web-ext run --source-dir dist --firefox /Applications/Firefox.app/Contents/MacOS/firefox",
+    "check": "npm run format:check && npm run check:code",
+    "dev": "npm run build && web-ext run --source-dir dist --firefox firefox",
     "preview": "npm run build && node scripts/preview.mjs",
     "test:firefox": "npm run build && node scripts/test-firefox.mjs",
-    "demo": "npm run build && node scripts/preview.mjs --demo --port=4174"
+    "demo": "npm run build && node scripts/preview.mjs --demo --port=4174",
+    "format": "prettier --write .",
+    "format:check": "prettier --check . && node scripts/check-style.mjs",
+    "check:code": "npm run typecheck && npm test && npm run build && npm run lint"
   },
   "engines": {
     "node": ">=22"
@@ -23,12 +26,14 @@
     "@mozilla/readability": "^0.6.0"
   },
   "devDependencies": {
+    "@babel/parser": "^8.0.7",
     "@playwright/test": "^1.64.1",
     "@types/firefox-webext-browser": "^143.0.1",
     "@types/jsdom": "^30.0.0",
     "@types/node": "^26.6.5",
     "esbuild": "^0.28.2",
     "jsdom": "^29.1.1",
+    "prettier": "^3.9.10",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "web-ext": "^10.8.0"

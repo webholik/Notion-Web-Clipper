@@ -1,38 +1,172 @@
 <!doctype html>
 <html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="light dark"><title>Pocket Clipper</title><link rel="stylesheet" href="ui.css"><script src="ui.js" defer></script></head>
-<body>
-<main id="app">
-  <header class="topbar"><div class="brand"><img src="icons/clip.svg" width="32" height="32" alt=""><span>Pocket Clipper<small>FOR NOTION</small></span></div><div class="toolbar"><button id="settings" class="icon-button" aria-label="Manage connections">Settings</button></div></header>
-  <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
-  <section id="loading"><p class="muted">Opening your clipper…</p></section>
-  <section id="vault" hidden>
-    <div class="eyebrow">YOUR READING, WITH YOU</div><h1 id="vault-title">Unlock your clipper</h1><p id="vault-copy" class="muted">Enter your passphrase to access your workspaces and saved captures.</p>
-    <form id="unlock-form"><label for="passphrase">Passphrase</label><input id="passphrase" type="password" autocomplete="current-password"><button id="unlock" class="primary" type="submit">Unlock clipper</button></form>
-    <p class="fine">This is a one-time migration. Your previous passphrase is never sent to Notion.</p>
-  </section>
-  <section id="connections" hidden>
-    <div class="eyebrow">MAKE YOURSELF AT HOME</div><h1 id="connections-title">Connect a workspace</h1><p id="connections-copy" class="muted">Use your own Notion integration. Clips go directly from Firefox to Notion.</p>
-    <div id="connected-list"></div>
-    <button id="add-workspace" class="secondary" type="button" aria-expanded="false" aria-controls="connection-setup" hidden>Add another workspace</button>
-    <div id="connection-setup">
-    <ol class="setup-steps"><li><a href="https://app.notion.com/developers/connections" target="_blank" rel="noreferrer">Create an internal integration</a> with Read, Insert and Update content.</li><li>In Notion, open a page or database. Choose <strong>••• → Connections</strong> and add your integration.</li><li>Paste the integration token below.</li></ol>
-    <form id="connect-form"><label for="connection-name">Workspace label <span class="optional">optional</span></label><input id="connection-name" placeholder="Personal workspace" maxlength="80" autocomplete="off"><label for="token">Integration token</label><input id="token" type="password" placeholder="ntn_…" autocomplete="off" required spellcheck="false"><button id="connect" type="submit" class="primary">Connect to Notion <span aria-hidden="true">↗</span></button></form>
-    </div>
-  </section>
-  <section id="clip" hidden>
-    <div class="eyebrow">KEEP THE GOOD STUFF</div><h1>Save for later.</h1><p class="muted intro">A place for the pages worth coming back to.</p>
-    <div class="source-line"><span class="source-dot" aria-hidden="true"></span><span id="source">Reading the current page…</span><button id="recapture" class="text-button">Refresh</button></div>
-    <label for="clip-title">Page title</label><textarea id="clip-title" rows="2" maxlength="1000" placeholder="Reading the page title…"></textarea>
-    <fieldset class="capture-mode"><legend>Save as</legend><label><input type="radio" name="mode" value="article" checked><span>Article<small>Readable, editable content</small></span></label><label><input type="radio" name="mode" value="link"><span>Link only<small>A bookmark to come back to</small></span></label></fieldset>
-    <div id="article-preview" class="article-preview"><span id="capture-summary" class="eyebrow">CAPTURING ARTICLE</span><p id="excerpt"></p><p id="capture-warning" class="warning" hidden></p></div>
-    <label for="workspace">Workspace</label><select id="workspace"></select>
-    <label for="choose-destination">Save to</label><button id="choose-destination" class="destination" type="button" aria-expanded="false" aria-controls="destination-picker"><span><span class="destination-icon" aria-hidden="true">▤</span> <span id="destination-name">Choose a page or database</span></span><span aria-hidden="true">⌄</span></button>
-    <section id="destination-picker" class="picker" aria-label="Choose destination" hidden><form id="search-form" class="search"><input id="search" type="search" placeholder="Find a page or database" aria-label="Search pages and databases" maxlength="100"><button type="submit">Search</button></form><p id="destination-status" class="fine" role="status"></p><div id="destinations" class="destinations"></div><button id="more" class="secondary" hidden>Load more destinations</button><p class="fine">Only pages and databases shared with this Notion integration can appear here. In Notion, open the database → ••• → Connections to grant access.</p></section>
-    <button id="save" class="primary save" disabled>Save to Notion <span aria-hidden="true">↗</span></button><p class="fine centered">Saved as editable content, with a link to the original.</p>
-  </section>
-  <section id="activity" class="activity" hidden><div class="section-label"><h2>Your clips</h2><span id="job-count" class="fine"></span></div><div id="jobs"></div></section>
-  <section id="privacy" class="privacy" hidden><h2>On this device</h2><p class="fine">Your workspace connections and clips are remembered on this device. No passphrase is needed when you return. Remove a connection or delete local data below to forget it.</p><button id="forget" class="danger text-button">Delete all local clipper data</button></section>
-  <footer>Small pocket. Good ideas.<span>Independent tool · Not affiliated with Notion</span></footer>
-</main>
-</body></html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Pocket Clipper</title>
+    <link rel="stylesheet" href="ui.css" />
+    <script src="ui.js" defer></script>
+  </head>
+  <body>
+    <main id="app">
+      <header class="topbar">
+        <div class="brand">
+          <img src="icons/clip.svg" width="32" height="32" alt="" /><span
+            >Pocket Clipper<small>FOR NOTION</small></span
+          >
+        </div>
+        <div class="toolbar">
+          <button id="settings" class="icon-button" aria-label="Manage connections">
+            Settings
+          </button>
+        </div>
+      </header>
+      <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+      <section id="loading"><p class="muted">Opening your clipper…</p></section>
+      <section id="connections" hidden>
+        <div class="eyebrow">MAKE YOURSELF AT HOME</div>
+        <h1 id="connections-title">Connect a workspace</h1>
+        <p id="connections-copy" class="muted">
+          Use your own Notion integration. Clips go directly from Firefox to Notion.
+        </p>
+        <div id="connected-list"></div>
+        <button
+          id="add-workspace"
+          class="secondary"
+          type="button"
+          aria-expanded="false"
+          aria-controls="connection-setup"
+          hidden
+        >
+          Add another workspace
+        </button>
+        <div id="connection-setup">
+          <ol class="setup-steps">
+            <li>
+              <a
+                href="https://app.notion.com/developers/connections"
+                target="_blank"
+                rel="noreferrer"
+                >Create an internal integration</a
+              >
+              with Read, Insert and Update content.
+            </li>
+            <li>
+              In Notion, open a page or database. Choose <strong>••• → Connections</strong> and add
+              your integration.
+            </li>
+            <li>Paste the integration token below.</li>
+          </ol>
+          <form id="connect-form">
+            <label for="connection-name"
+              >Workspace label <span class="optional">optional</span></label
+            ><input
+              id="connection-name"
+              placeholder="Personal workspace"
+              maxlength="80"
+              autocomplete="off"
+            /><label for="token">Integration token</label
+            ><input
+              id="token"
+              type="password"
+              placeholder="ntn_…"
+              autocomplete="off"
+              required
+              spellcheck="false"
+            /><button id="connect" type="submit" class="primary">
+              Connect to Notion <span aria-hidden="true">↗</span>
+            </button>
+          </form>
+        </div>
+      </section>
+      <section id="clip" hidden>
+        <h1>Save for later.</h1>
+        <div class="source-line">
+          <span class="source-dot" aria-hidden="true"></span
+          ><span id="source">Reading the current page…</span
+          ><button id="recapture" class="text-button">Refresh</button>
+        </div>
+        <label for="clip-title">Page title</label
+        ><textarea
+          id="clip-title"
+          rows="2"
+          maxlength="1000"
+          placeholder="Reading the page title…"
+        ></textarea>
+        <fieldset class="capture-mode">
+          <legend>Save as</legend>
+          <label
+            ><input type="radio" name="mode" value="article" checked /><span
+              >Article<small>Readable, editable content</small></span
+            ></label
+          ><label
+            ><input type="radio" name="mode" value="link" /><span
+              >Link only<small>A bookmark to come back to</small></span
+            ></label
+          >
+        </fieldset>
+        <div id="article-preview" class="article-preview">
+          <span id="capture-summary" class="eyebrow">CAPTURING ARTICLE</span>
+          <p id="excerpt"></p>
+          <p id="capture-warning" class="warning" hidden></p>
+        </div>
+        <label for="workspace">Workspace</label
+        ><select id="workspace"></select>
+        <label for="choose-destination">Save to</label
+        ><button
+          id="choose-destination"
+          class="destination"
+          type="button"
+          aria-expanded="false"
+          aria-controls="destination-picker"
+        >
+          <span
+            ><span class="destination-icon" aria-hidden="true">▤</span>
+            <span id="destination-name">Choose a page or database</span></span
+          ><span aria-hidden="true">⌄</span>
+        </button>
+        <section id="destination-picker" class="picker" aria-label="Choose destination" hidden>
+          <form id="search-form" class="search">
+            <input
+              id="search"
+              type="search"
+              placeholder="Find a page or database"
+              aria-label="Search pages and databases"
+              maxlength="100"
+            /><button type="submit">Search</button>
+          </form>
+          <p id="destination-status" class="fine" role="status"></p>
+          <div id="destinations" class="destinations"></div>
+          <button id="more" class="secondary" hidden>Load more destinations</button>
+          <p class="fine">
+            Only pages and databases shared with this Notion integration can appear here. In Notion,
+            open the database → ••• → Connections to grant access.
+          </p>
+        </section>
+        <button id="save" class="primary save" disabled>
+          Save to Notion <span aria-hidden="true">↗</span>
+        </button>
+        <p class="fine centered">Saved as editable content, with a link to the original.</p>
+      </section>
+      <section id="activity" class="activity" hidden>
+        <div class="section-label">
+          <h2>Your clips</h2>
+          <span id="job-count" class="fine"></span>
+        </div>
+        <div id="jobs"></div>
+      </section>
+      <section id="privacy" class="privacy" hidden>
+        <h2>On this device</h2>
+        <p class="fine">
+          Your workspace connections and clips are remembered on this device. No passphrase is
+          needed when you return. Remove a connection or delete local data below to forget it.
+        </p>
+        <button id="forget" class="danger text-button">Delete all local clipper data</button>
+      </section>
+      <footer>
+        Small pocket. Good ideas.<span>Independent tool · Not affiliated with Notion</span>
+      </footer>
+    </main>
+  </body>
+</html>
